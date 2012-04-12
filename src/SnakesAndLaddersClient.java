@@ -1,34 +1,28 @@
 import java.io.*;
 import java.net.*;
-
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 public class SnakesAndLaddersClient {
 	
 	private static final String[] playerCols = { "blue", "green", "red", "orange", "yellow" };
 	
-	private JFrame frame;
+	private int playerID;
+	private String playerName;
 	private Socket clientSoc;
 	private BufferedReader in;
 	private PrintWriter out;
-	private SnakesAndLaddersGUI board;
 	
-	public SnakesAndLaddersClient(Socket clientSoc) throws IOException {
+	public GamePanel gamePanel;
+	
+	public SnakesAndLaddersClient(String playerName, GamePanel gamePanel, Socket clientSoc) throws IOException {
+		this.playerName = playerName;
+		this.gamePanel = gamePanel;
 		this.clientSoc = clientSoc;
 		in = new BufferedReader(new InputStreamReader(clientSoc.getInputStream()));
 		out = new PrintWriter(clientSoc.getOutputStream(), true);
-		
-		frame = new JFrame();
-      	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-  		frame.setSize(400,400);
-  		frame.add(board = new SnakesAndLaddersGUI());
-      	frame.setLocationRelativeTo(null);
-      	frame.setResizable(false);
-      	frame.setVisible(true);
 	}
 
-	private void startListeningToServer() {
+	public void startListeningToServer() {
 		/* Start a thread that listens to incoming messages. */
 		new Thread(new Runnable() {
 			public void run() {
@@ -37,64 +31,51 @@ public class SnakesAndLaddersClient {
 					clientSoc.close();
 					System.exit(0);
 				} catch (SocketException e) {
-					System.out.println("Server has disconnected.");
+					JOptionPane.showMessageDialog(gamePanel.frame, "The Server has disconnected. The game will now shut down.", "Error", JOptionPane.ERROR_MESSAGE);
 					System.exit(0);
-				} catch (IOException e) {
-					e.printStackTrace();
+				} catch (Exception e) {
+					/* Shut down quietly if the main thread has ended. */
 				}
 			}
-		}).start();
-
-		/* NB: Although there is no reason why the above should run in its own thread
-		 * if all the client does is listen to the server, it is implemented that way
-		 * to allow for expanding the code to include two-way communication. */
-		
-		//TODO: Consider letting the clients roll die. 
-		//out.println("r");
+		}, "Incoming Message Handling Thread").start();
+	}
+	
+	public void sendMessage(String msg) {
+		out.println(msg);
 	}
 	
 	private boolean handleMessage(String msg) throws IOException {
 		if(msg == null) {
-			System.out.println("Server has disconnected.");
+			JOptionPane.showMessageDialog(gamePanel.frame, "The Server has disconnected. The game will now shut down.", "Error", JOptionPane.ERROR_MESSAGE);
 			return false;
 		}
 		String[] data = msg.split("\\s+");
-		if (data[0].equals("m"))
-			board.setPosition(Integer.parseInt(data[1]), Integer.parseInt(data[2]));
-		else if(data[0].equals("n"))
-			board.setNumberOfPlayers(Integer.parseInt(data[1]));
-		else if(data[0].equals("i")) {
-			frame.setTitle("Player "+(Integer.parseInt(data[1])+1)+" ("+playerCols[Integer.parseInt(data[1])]+")");
+		if (data[0].equals("m")) {
+			gamePanel.board.setPosition(Integer.parseInt(data[1]), Integer.parseInt(data[2]));
+		} else if(data[0].equals("d")) {
+			int rollingPlayerID = Integer.parseInt(data[1]);
+			gamePanel.gcPanel.setGameStatus(((rollingPlayerID==playerID)?"You have":gamePanel.prPanel.getPlayerName(rollingPlayerID)+" has")+" rolled a "+Integer.parseInt(data[2])+".");
+		} else if(data[0].equals("p")) {
+			int currentPlayerID = Integer.parseInt(data[1]);
+			boolean isThisPlayersTurn = currentPlayerID==playerID;
+			if (currentPlayerID != -1)
+				gamePanel.gcPanel.setGameStatus("It is "+(isThisPlayersTurn?"your":gamePanel.prPanel.getPlayerName(currentPlayerID)+"'s")+" turn (P"+(currentPlayerID+1)+").");
+			gamePanel.gcPanel.setRollEnabled(isThisPlayersTurn);
+		} else if(data[0].equals("l")) {
+			gamePanel.board.setNumberOfPlayers(data.length-1);
+			for (int i = 1; i < data.length; i++)
+				gamePanel.prPanel.setPlayerName(i-1, data[i]);
+			gamePanel.frame.pack();
+		} else if(data[0].equals("i")) {
+			playerID = Integer.parseInt(data[1]);
+			gamePanel.frame.setTitle("Snakes and Ladders Client - "+playerName+" (P"+(playerID+1)+", "+playerCols[playerID]+")");
+			sendMessage("n "+playerName);
 		} else if(data[0].equals("w")) {
-			JOptionPane.showMessageDialog(frame, "Player "+(Integer.parseInt(data[1])+1)+" has won the game!", "Game Over", JOptionPane.INFORMATION_MESSAGE);
+			int winningPlayerID = Integer.parseInt(data[1]);
+			JOptionPane.showMessageDialog(gamePanel.frame, ((winningPlayerID==playerID)?"You have":gamePanel.prPanel.getPlayerName(winningPlayerID)+" has")+" won the game!", "Game Over - P"+(winningPlayerID+1)+" Win", JOptionPane.INFORMATION_MESSAGE);
 			return false;
-		}
-			
-		//System.out.println(">"+msg);
+		} else
+			gamePanel.gcPanel.setGameStatus("Server: "+msg);
 		return true;
-	}
-	
-	public static void main(String[] args) {
-		System.out.println("Starting Snakes and Ladders Client.");
-		
-		String host = "localhost";
-		int port = 8250;
-		
-		if (args.length<1)
-			System.out.println("To change default host and port ("+host+":"+port+"), input the host and port as command-line arguments respectively.");
-		if (args.length>0)
-			host = args[0];
-		if (args.length>1)
-			port = Integer.parseInt(args[1]);
-		
-		System.out.println("Connecting to port "+port+" on "+host+".");
-		
-		try {
-			new SnakesAndLaddersClient(new Socket(host, port)).startListeningToServer();
-		} catch (UnknownHostException e) {
-			System.err.println("Error: Could not resolve host.");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 }

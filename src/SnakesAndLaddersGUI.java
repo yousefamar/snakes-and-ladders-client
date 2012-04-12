@@ -1,34 +1,31 @@
-
-import java.awt.Color;
-import java.awt.EventQueue;
-import java.awt.Graphics;
-import java.awt.Image;
-import javax.swing.ImageIcon;
-import javax.swing.JPanel;
+import java.awt.*;
+import javax.swing.*;
 
 @SuppressWarnings("serial")
-public class SnakesAndLaddersGUI extends JPanel implements Runnable {
+public class SnakesAndLaddersGUI extends JPanel {
+
+	public static final Color[] playerCols = { Color.BLUE, Color.GREEN, Color.RED, Color.ORANGE, Color.YELLOW };
 	
-	private int[] players = new int[5];
-	private final Color[] colour = { Color.BLUE, Color.GREEN, Color.RED, Color.ORANGE, Color.YELLOW };
+	private int[] playerPoss = new int[5];
 	private final double[] shiftx = { 0.3D, 0.3D, -0.3D, -0.3D, 0.0D };
 	private final double[] shifty = { 0.3D, -0.3D, 0.3D, -0.3D, 0.0D };
 	private Image background = null;
 	private int noofplayers = 0;
 
-	SnakesAndLaddersGUI() {
+	public SnakesAndLaddersGUI() {
+		super();
 		background = new ImageIcon(getClass().getResource("board.gif")).getImage();
 	}
 
 	public void setNumberOfPlayers(int num) {
 		noofplayers = num;
-		syncRequestRepaint();
+		repaint();
 	}
 
 	public void setPosition(int playerIndex, int square) {
 		if ((playerIndex >= 0) && (playerIndex <= noofplayers)) {
-			players[playerIndex] = square;
-			syncRequestRepaint();
+			playerPoss[playerIndex] = square;
+			repaint();
 		} else {
 			System.out.println("Error: You are trying to access player number "	+ playerIndex + " which doesn't exist\n");
 		}
@@ -51,7 +48,7 @@ public class SnakesAndLaddersGUI extends JPanel implements Runnable {
 		double squareHeight = height / 10.0D;
 
 		for (int playerIndex = 0; playerIndex < noofplayers; playerIndex++) {
-			int playerPos = players[playerIndex];
+			int playerPos = playerPoss[playerIndex];
 			if ((playerPos < 1) || (playerPos > 100))
 				continue;
 			int row = (playerPos - 1) % 10;
@@ -63,21 +60,10 @@ public class SnakesAndLaddersGUI extends JPanel implements Runnable {
 			row = (int) ((row + 0.25D) * squareWidth);
 			col = height - (int) ((col + 0.75D) * squareHeight);
 
-			gfx.setColor(colour[playerIndex]);
+			gfx.setColor(playerCols[playerIndex]);
 			gfx.fillOval(row + (int) (shiftx[playerIndex] * squareWidth / 2.0D), col + (int) (shifty[playerIndex] * squareHeight / 2.0D), (int) (squareWidth / 2.2D + 1.0D), (int) (squareHeight / 2.2D + 1.0D));
 			gfx.setColor(Color.BLACK);
 			gfx.drawOval(row + (int) (shiftx[playerIndex] * squareWidth / 2.0D), col + (int) (shifty[playerIndex] * squareHeight / 2.0D), (int) (squareWidth / 2.2D + 1.0D), (int) (squareHeight / 2.2D + 1.0D));
-		}
-	}
-
-	public void run() {
-		repaint();
-	}
-
-	private void syncRequestRepaint() {
-		try {
-			EventQueue.invokeAndWait(this);
-		} catch (Exception e) {
 		}
 	}
 }
