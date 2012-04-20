@@ -1,9 +1,11 @@
+package gui;
 import java.awt.*;
 import javax.swing.*;
 
 @SuppressWarnings("serial")
-public class SnakesAndLaddersGUI extends JPanel {
+public class SnakesAndLaddersGUI extends JPanel implements Runnable {
 
+	/* Colours made static for other uses in GUI. */
 	public static final Color[] playerCols = { Color.BLUE, Color.GREEN, Color.RED, Color.ORANGE, Color.YELLOW };
 	
 	private int[] playerPoss = new int[5];
@@ -19,13 +21,13 @@ public class SnakesAndLaddersGUI extends JPanel {
 
 	public void setNumberOfPlayers(int num) {
 		noofplayers = num;
-		repaint();
+		syncRequestRepaint();
 	}
 
 	public void setPosition(int playerIndex, int square) {
 		if ((playerIndex >= 0) && (playerIndex <= noofplayers)) {
 			playerPoss[playerIndex] = square;
-			repaint();
+			syncRequestRepaint();
 		} else {
 			System.out.println("Error: You are trying to access player number "	+ playerIndex + " which doesn't exist\n");
 		}
@@ -64,6 +66,17 @@ public class SnakesAndLaddersGUI extends JPanel {
 			gfx.fillOval(row + (int) (shiftx[playerIndex] * squareWidth / 2.0D), col + (int) (shifty[playerIndex] * squareHeight / 2.0D), (int) (squareWidth / 2.2D + 1.0D), (int) (squareHeight / 2.2D + 1.0D));
 			gfx.setColor(Color.BLACK);
 			gfx.drawOval(row + (int) (shiftx[playerIndex] * squareWidth / 2.0D), col + (int) (shifty[playerIndex] * squareHeight / 2.0D), (int) (squareWidth / 2.2D + 1.0D), (int) (squareHeight / 2.2D + 1.0D));
+		}
+	}
+
+	public void run() {
+		repaint();
+	}
+
+	private void syncRequestRepaint() {
+		try {
+			EventQueue.invokeAndWait(this);
+		} catch (Exception e) {
 		}
 	}
 }
